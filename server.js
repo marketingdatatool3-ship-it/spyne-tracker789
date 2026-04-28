@@ -216,7 +216,10 @@ app.get('/api/stats', auth, (req, res) => {
   });
 });
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 initDB().then(async () => {
