@@ -66,10 +66,16 @@ async function initDB() {
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 function auth(req, res, next) {
-  const token = req.cookies.token || (req.headers.authorization || '').replace('Bearer ', '');
+  const authHeader = req.headers.authorization || '';
+  const cookieToken = req.cookies ? req.cookies.token : '';
+  const token = authHeader.replace('Bearer ', '') || cookieToken || '';
+  console.log('Auth attempt, token present:', !!token, 'length:', token.length);
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try { req.user = jwt.verify(token, SECRET); next(); }
-  catch { res.status(401).json({ error: 'Invalid token' }); }
+  catch(e) { 
+    console.log('Token verify failed:', e.message);
+    res.status(401).json({ error: 'Invalid token' }); 
+  }
 }
 function adminOnly(req, res, next) {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
@@ -95,7 +101,9 @@ app.post('/api/auth/login', async (req, res) => {
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
   const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, SECRET, { expiresIn: '7d' });
-  res.cookie('token', token, { httpOnly: true, maxAge: 7 * 86400 * 1000, sameSite: 'none', secure: true });
+  // Set cookie as backup
+  try { res.cookie('token', token, { httpOnly: true, maxAge: 7 * 86400 * 1000, sameSite: 'none', secure: true }); } catch(e) {}
+  // Always return token in body - frontend uses this
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_color: user.avatar_color } });
 });
 app.post('/api/auth/logout', (req, res) => { res.clearCookie('token'); res.json({ ok: true }); });
