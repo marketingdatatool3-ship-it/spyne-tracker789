@@ -149,12 +149,12 @@ app.delete('/api/users/:id', auth, adminOnly, (req, res) => {
 function enrichItems(items) {
   const users = all('SELECT id,name,avatar_color,role FROM users');
   const map = {};
-  users.forEach(u => { map[u.id] = u; });
+  users.forEach(u => { if(u && u.id) map[u.id] = u; });
   return items.map(item => ({
     ...item,
-    writer:   map[item.content_writer_id]  || null,
-    designer: map[item.design_assignee_id] || null,
-    creator:  map[item.created_by]         || null,
+    writer:   (item.content_writer_id  && map[item.content_writer_id])  || null,
+    designer: (item.design_assignee_id && map[item.design_assignee_id]) || null,
+    creator:  (item.created_by         && map[item.created_by])         || null,
   }));
 }
 app.get('/api/items', auth, (req, res) => {
@@ -176,11 +176,12 @@ app.post('/api/items', auth, (req, res) => {
     content_writer_id,content_delivery_date,seo_assigned_date,design_status,design_assignee_id,
     design_assign_date,design_delivery_date,overall_status,approved,live_url,new_content_link,
     notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id,keywords,type,category,cluster,ams,content_status||'Not Started',
-     content_writer_id||null,content_delivery_date||null,seo_assigned_date||null,
-     design_status||'Not Assigned',design_assignee_id||null,design_assign_date||null,
-     design_delivery_date||null,overall_status||'In Progress',approved||null,
-     live_url||null,new_content_link||null,notes||null,req.user.id]);
+    [id, keywords, type||'', category||'', cluster||'', ams||'',
+     content_status||'Not Started',
+     content_writer_id||'', content_delivery_date||'', seo_assigned_date||'',
+     design_status||'Not Assigned', design_assignee_id||'', design_assign_date||'',
+     design_delivery_date||'', overall_status||'In Progress', approved||'',
+     live_url||'', new_content_link||'', notes||'', req.user.id]);
   run('INSERT INTO activity_log (id,item_id,user_id,action,details) VALUES (?,?,?,?,?)',
     [uuid(), id, req.user.id, 'created', `Created "${keywords}"`]);
   res.json(enrichItems([get('SELECT * FROM content_items WHERE id=?', [id])])[0]);
@@ -196,7 +197,7 @@ app.put('/api/items/:id', auth, (req, res) => {
     'content_delivery_date','seo_assigned_date','design_status','design_assignee_id',
     'design_assign_date','design_delivery_date','overall_status','approved','live_url','new_content_link','notes'];
   const sets = []; const params = [];
-  fields.forEach(f => { if (allowed[f] !== undefined) { sets.push(`${f}=?`); params.push(allowed[f]); } });
+  fields.forEach(f => { if (allowed[f] !== undefined) { sets.push(`${f}=?`); params.push(allowed[f] || ''); } });
   if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
   sets.push("updated_at=datetime('now')");
   params.push(req.params.id);
