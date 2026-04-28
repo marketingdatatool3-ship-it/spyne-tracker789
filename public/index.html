@@ -523,8 +523,15 @@ let sideFilter = { type: 'status', val: 'all' };
 // API helpers
 // ══════════════════════════════════════════════════════════════════════════════
 async function api(method, path, body) {
-  const token = localStorage.getItem("spyne_token");
-  const opts = { method, headers: { "Content-Type": "application/json", ...(token ? {"Authorization": "Bearer " + token} : {}) }, credentials: "include" };
+  const token = window._authToken || localStorage.getItem("spyne_token") || "";
+  const opts = { 
+    method, 
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    credentials: "include"
+  };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(path, opts);
   const j = await r.json();
@@ -549,7 +556,8 @@ async function doLogin() {
   try {
     const data = await POST('/api/auth/login', { email, password: pw });
     ME = data.user;
-    if (data.token) localStorage.setItem("spyne_token", data.token);
+    window._authToken = data.token;
+    localStorage.setItem("spyne_token", data.token);
     bootApp();
   } catch (e) { showLoginErr(e.message); }
   finally { btn.textContent = 'Sign In'; btn.disabled = false; }
@@ -572,6 +580,7 @@ async function checkAuth() {
   try {
     const token = localStorage.getItem("spyne_token");
     if (!token) return;
+    window._authToken = token;
     ME = await GET('/api/auth/me');
     bootApp();
   } catch { /* not logged in */ }
