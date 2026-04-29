@@ -915,6 +915,14 @@ async function openItemModal(id) {
 
     ${r.notes?`<div class="sect">Notes</div><p style="font-size:13px;color:var(--tm)">${r.notes}</p>`:''}
 
+    ${(r.doc_link||r.images_needed||r.creative_drive)?`
+    <div class="sect">Additional Info</div>
+    <div class="mgrid">
+      ${r.doc_link?`<div><div class="mf-l">Doc Link</div><div class="mf-v"><a href="${r.doc_link}" target="_blank" style="color:var(--orl)">Open Doc ↗</a></div></div>`:''}
+      ${r.images_needed?`<div><div class="mf-l">Images Needed</div><div class="mf-v">${r.images_needed}</div></div>`:''}
+      ${r.creative_drive?`<div><div class="mf-l">Creative Drive</div><div class="mf-v"><a href="${r.creative_drive}" target="_blank" style="color:var(--orl)">Open Drive ↗</a></div></div>`:''}
+    </div>`:''}
+
     <div style="display:flex;gap:10px;margin-top:22px">
       ${canEdit?`<button class="btn btn-primary btn-sm" onclick="openEditDrawer('${id}');document.getElementById('item-modal').classList.remove('open')">Edit Item</button>`:''}
       ${ME.role==='admin'?`<button class="btn btn-danger btn-sm" onclick="confirmDelete('${id}');document.getElementById('item-modal').classList.remove('open')">Delete</button>`:''}
@@ -974,7 +982,7 @@ function renderDrawer(item, editId) {
           <label class="form-label">Category</label>
           <select class="form-select" name="category">
             <option value="">— Select —</option>
-            ${['Conversational AI','Image','Connect AI'].map(c=>`<option ${item?.category===c?'selected':''}>${c}</option>`).join('')}
+            ${['Conversational AI','Image','Connect AI','Merchandising'].map(c=>`<option ${item?.category===c?'selected':''}>${c}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -989,6 +997,16 @@ function renderDrawer(item, editId) {
             <option value="">— Assign —</option>
             ${writers.map(u=>`<option value="${u.id}" ${item?.content_writer_id===u.id?'selected':''}>${u.name}</option>`).join('')}
           </select>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label class="form-label">Doc Link</label>
+          <input class="form-input" name="doc_link" type="url" placeholder="https://docs.google.com/…" value="${item?.doc_link||''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Images Needed</label>
+          <input class="form-input" name="images_needed" type="number" placeholder="e.g. 3" value="${item?.images_needed||''}">
         </div>
       </div>
       <div class="form-row2">
@@ -1042,6 +1060,10 @@ function renderDrawer(item, editId) {
           <label class="form-label">Design Delivery</label>
           <input class="form-input" name="design_delivery_date" type="date" value="${item?.design_delivery_date||''}">
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Creative Drive</label>
+        <input class="form-input" name="creative_drive" type="url" placeholder="https://drive.google.com/…" value="${item?.creative_drive||''}">
       </div>
 
       ${!isDesign ? `
