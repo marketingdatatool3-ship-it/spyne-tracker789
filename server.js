@@ -10,7 +10,9 @@ const fs           = require('fs');
 const app     = express();
 const PORT    = process.env.PORT || 3000;
 const SECRET  = process.env.JWT_SECRET || 'spyne_tracker_secret_change_in_prod';
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'tracker.sqlite');
+// Use /tmp for persistence on Render (persists between requests, not deploys)
+const DB_PATH = process.env.DB_PATH || '/tmp/tracker.sqlite';
+console.log('DB path:', DB_PATH);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -54,8 +56,13 @@ async function initDB() {
     design_assign_date TEXT, design_delivery_date TEXT,
     overall_status TEXT DEFAULT 'In Progress', approved TEXT,
     live_url TEXT, new_content_link TEXT, notes TEXT, created_by TEXT,
+    doc_link TEXT, images_needed TEXT, creative_drive TEXT,
     created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
   )`);
+  // Add new columns to existing DB if upgrading
+  try { db.run('ALTER TABLE content_items ADD COLUMN doc_link TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE content_items ADD COLUMN images_needed TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE content_items ADD COLUMN creative_drive TEXT'); } catch(e) {}
   db.run(`CREATE TABLE IF NOT EXISTS activity_log (
     id TEXT PRIMARY KEY, item_id TEXT, user_id TEXT,
     action TEXT, details TEXT, created_at TEXT DEFAULT (datetime('now'))
@@ -172,16 +179,18 @@ app.post('/api/items', auth, (req, res) => {
     live_url, new_content_link, notes } = req.body;
   if (!keywords) return res.status(400).json({ error: 'keywords required' });
   const id = uuid();
+  const { doc_link, images_needed, creative_drive } = req.body;
   run(`INSERT INTO content_items (id,keywords,type,category,cluster,ams,content_status,
     content_writer_id,content_delivery_date,seo_assigned_date,design_status,design_assignee_id,
     design_assign_date,design_delivery_date,overall_status,approved,live_url,new_content_link,
-    notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    notes,created_by,doc_link,images_needed,creative_drive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, keywords, type||'', category||'', cluster||'', ams||'',
      content_status||'Not Started',
      content_writer_id||'', content_delivery_date||'', seo_assigned_date||'',
      design_status||'Not Assigned', design_assignee_id||'', design_assign_date||'',
      design_delivery_date||'', overall_status||'In Progress', approved||'',
-     live_url||'', new_content_link||'', notes||'', req.user.id]);
+     live_url||'', new_content_link||'', notes||'', req.user.id,
+     doc_link||'', images_needed||'', creative_drive||'']);
   run('INSERT INTO activity_log (id,item_id,user_id,action,details) VALUES (?,?,?,?,?)',
     [uuid(), id, req.user.id, 'created', `Created "${keywords}"`]);
   res.json(enrichItems([get('SELECT * FROM content_items WHERE id=?', [id])])[0]);
@@ -195,7 +204,8 @@ app.put('/api/items/:id', auth, (req, res) => {
   if (req.user.role === 'design' && req.body.design_status === 'Design Done') allowed.overall_status = 'Content Done';
   const fields = ['keywords','type','category','cluster','ams','content_status','content_writer_id',
     'content_delivery_date','seo_assigned_date','design_status','design_assignee_id',
-    'design_assign_date','design_delivery_date','overall_status','approved','live_url','new_content_link','notes'];
+    'design_assign_date','design_delivery_date','overall_status','approved','live_url','new_content_link','notes',
+    'doc_link','images_needed','creative_drive'];
   const sets = []; const params = [];
   fields.forEach(f => { if (allowed[f] !== undefined) { sets.push(`${f}=?`); params.push(allowed[f] || ''); } });
   if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
