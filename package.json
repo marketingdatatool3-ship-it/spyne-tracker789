@@ -1,6 +1,6 @@
 {
   "name": "spyne-content-tracker",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Spyne internal content & design tracker",
   "main": "server.js",
   "scripts": {
@@ -12,6 +12,7 @@
     "cookie-parser": "^1.4.6",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
     "uuid": "^9.0.0"
   },
   "engines": { "node": ">=18.0.0" }
