@@ -4,245 +4,198 @@ const bcrypt       = require('bcryptjs');
 const jwt          = require('jsonwebtoken');
 const { v4: uuid } = require('uuid');
 const path         = require('path');
-const fs           = require('fs');
+const { Pool }     = require('pg');
 
-const app     = express();
-const PORT    = process.env.PORT || 3000;
-const SECRET  = process.env.JWT_SECRET || 'spyne_tracker_secret_change_in_prod';
+const app    = express();
+const PORT   = process.env.PORT || 3000;
+const SECRET = process.env.JWT_SECRET || 'spyne_tracker_secret_change_in_prod';
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Database - JSON file based (persists on Render disk) ─────────────────────
-const DATA_FILE = process.env.DATA_FILE || '/tmp/spyne_data.json';
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-function loadData() {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    }
-  } catch(e) { console.log('Load error:', e.message); }
-  return { users: [], items: [], logs: [] };
+async function query(sql, params = []) {
+  const client = await pool.connect();
+  try { const res = await client.query(sql, params); return res.rows; }
+  finally { client.release(); }
+}
+async function queryOne(sql, params = []) {
+  const rows = await query(sql, params); return rows[0] || null;
 }
 
-function saveData(data) {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-  } catch(e) { console.log('Save error:', e.message); }
+async function initDB() {
+  await query(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'content', avatar_color TEXT DEFAULT '#D94F04', created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await query(`CREATE TABLE IF NOT EXISTS content_items (id TEXT PRIMARY KEY, keywords TEXT NOT NULL, type TEXT DEFAULT '', category TEXT DEFAULT '', cluster TEXT DEFAULT '', ams TEXT DEFAULT '', content_status TEXT DEFAULT 'Not Started', content_writer_id TEXT DEFAULT '', content_delivery_date TEXT DEFAULT '', seo_assigned_date TEXT DEFAULT '', design_status TEXT DEFAULT 'Not Assigned', design_assignee_id TEXT DEFAULT '', design_assign_date TEXT DEFAULT '', design_delivery_date TEXT DEFAULT '', overall_status TEXT DEFAULT 'In Progress', approved TEXT DEFAULT '', live_url TEXT DEFAULT '', new_content_link TEXT DEFAULT '', notes TEXT DEFAULT '', doc_link TEXT DEFAULT '', images_needed TEXT DEFAULT '', creative_drive TEXT DEFAULT '', created_by TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  await query(`CREATE TABLE IF NOT EXISTS activity_log (id TEXT PRIMARY KEY, item_id TEXT, user_id TEXT, user_name TEXT, action TEXT, details TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS doc_link TEXT DEFAULT ''"); } catch(e) {}
+  try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS images_needed TEXT DEFAULT ''"); } catch(e) {}
+  try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS creative_drive TEXT DEFAULT ''"); } catch(e) {}
+  console.log('Database ready');
 }
 
-let DB = loadData();
-
-// ── DB helpers ────────────────────────────────────────────────────────────────
-const dbUsers = {
-  all: ()         => DB.users,
-  get: (id)       => DB.users.find(u => u.id === id),
-  getByEmail: (e) => DB.users.find(u => u.email.toLowerCase() === e.toLowerCase()),
-  add: (u)        => { DB.users.push(u); saveData(DB); },
-  update: (id, fields) => {
-    const idx = DB.users.findIndex(u => u.id === id);
-    if (idx >= 0) { DB.users[idx] = { ...DB.users[idx], ...fields }; saveData(DB); }
-  },
-  delete: (id) => { DB.users = DB.users.filter(u => u.id !== id); saveData(DB); }
-};
-
-const dbItems = {
-  all: ()    => DB.items,
-  get: (id)  => DB.items.find(i => i.id === id),
-  add: (item) => { DB.items.unshift(item); saveData(DB); },
-  update: (id, fields) => {
-    const idx = DB.items.findIndex(i => i.id === id);
-    if (idx >= 0) { DB.items[idx] = { ...DB.items[idx], ...fields, updated_at: new Date().toISOString() }; saveData(DB); }
-  },
-  delete: (id) => { DB.items = DB.items.filter(i => i.id !== id); saveData(DB); }
-};
-
-const dbLogs = {
-  forItem: (id) => DB.logs.filter(l => l.item_id === id).slice(0, 10),
-  add: (log)    => { DB.logs.unshift(log); if (DB.logs.length > 500) DB.logs = DB.logs.slice(0, 500); saveData(DB); }
-};
-
-function enrichItems(items) {
-  return items.map(item => ({
-    ...item,
-    writer:   dbUsers.get(item.content_writer_id)  || null,
-    designer: dbUsers.get(item.design_assignee_id) || null,
-    creator:  dbUsers.get(item.created_by)         || null,
-  }));
+function enrichItems(items, users) {
+  const map = {}; users.forEach(u => { map[u.id] = u; });
+  return items.map(item => ({ ...item, writer: map[item.content_writer_id]||null, designer: map[item.design_assignee_id]||null, creator: map[item.created_by]||null }));
 }
 
-// ── Auth middleware ───────────────────────────────────────────────────────────
 function auth(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const cookieToken = req.cookies ? req.cookies.token : '';
-  const token = authHeader.replace('Bearer ', '') || cookieToken || '';
+  const token = (req.headers.authorization||'').replace('Bearer ','') || (req.cookies&&req.cookies.token) || '';
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try { req.user = jwt.verify(token, SECRET); next(); }
   catch(e) { res.status(401).json({ error: 'Invalid token' }); }
 }
 function adminOnly(req, res, next) {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-  next();
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' }); next();
 }
 
 async function seedAdmin() {
-  if (DB.users.length === 0) {
+  const existing = await queryOne('SELECT id FROM users LIMIT 1');
+  if (!existing) {
     const hash = await bcrypt.hash('spyne2024', 10);
-    dbUsers.add({
-      id: uuid(), name: 'Admin', email: 'admin@spyne.ai',
-      password: hash, role: 'admin', avatar_color: '#D94F04',
-      created_at: new Date().toISOString()
-    });
-    console.log('🔑 Default admin: admin@spyne.ai / spyne2024');
+    await query('INSERT INTO users (id,name,email,password,role,avatar_color) VALUES ($1,$2,$3,$4,$5,$6)', [uuid(),'Admin','admin@spyne.ai',hash,'admin','#D94F04']);
+    console.log('Default admin created: admin@spyne.ai / spyne2024');
   }
 }
 
-// ── Auth routes ───────────────────────────────────────────────────────────────
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-  const user = dbUsers.getByEmail(email);
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-  const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, SECRET, { expiresIn: '7d' });
-  try { res.cookie('token', token, { httpOnly: true, maxAge: 7*86400*1000, sameSite: 'none', secure: true }); } catch(e) {}
-  res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_color: user.avatar_color } });
+  try {
+    const { email, password } = req.body;
+    if (!email||!password) return res.status(400).json({ error: 'Email and password required' });
+    const user = await queryOne('SELECT * FROM users WHERE LOWER(email)=LOWER($1)', [email]);
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!await bcrypt.compare(password, user.password)) return res.status(401).json({ error: 'Invalid credentials' });
+    const token = jwt.sign({ id:user.id, email:user.email, name:user.name, role:user.role }, SECRET, { expiresIn:'7d' });
+    try { res.cookie('token', token, { httpOnly:true, maxAge:7*86400*1000, sameSite:'none', secure:true }); } catch(e) {}
+    res.json({ token, user: { id:user.id, name:user.name, email:user.email, role:user.role, avatar_color:user.avatar_color } });
+  } catch(e) { console.error(e); res.status(500).json({ error:'Server error' }); }
 });
 
-app.post('/api/auth/logout', (req, res) => { res.clearCookie('token'); res.json({ ok: true }); });
+app.post('/api/auth/logout', (req, res) => { res.clearCookie('token'); res.json({ ok:true }); });
 
-app.get('/api/auth/me', auth, (req, res) => {
-  const user = dbUsers.get(req.user.id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ id: user.id, name: user.name, email: user.email, role: user.role, avatar_color: user.avatar_color });
+app.get('/api/auth/me', auth, async (req, res) => {
+  try {
+    const user = await queryOne('SELECT id,name,email,role,avatar_color FROM users WHERE id=$1', [req.user.id]);
+    if (!user) return res.status(404).json({ error:'User not found' });
+    res.json(user);
+  } catch(e) { res.status(500).json({ error:'Server error' }); }
 });
 
-// ── User routes ───────────────────────────────────────────────────────────────
-app.get('/api/users', auth, (req, res) => {
-  res.json(dbUsers.all().map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, avatar_color: u.avatar_color, created_at: u.created_at })));
+app.get('/api/users', auth, async (req, res) => {
+  try { res.json(await query('SELECT id,name,email,role,avatar_color,created_at FROM users ORDER BY name')); }
+  catch(e) { res.status(500).json({ error:'Server error' }); }
 });
 
 app.post('/api/users', auth, adminOnly, async (req, res) => {
-  const { name, email, password, role, avatar_color } = req.body;
-  if (!name || !email || !password || !role) return res.status(400).json({ error: 'Missing fields' });
-  if (dbUsers.getByEmail(email)) return res.status(409).json({ error: 'Email already in use' });
-  const id = uuid();
-  dbUsers.add({ id, name, email, password: await bcrypt.hash(password, 10), role, avatar_color: avatar_color || '#D94F04', created_at: new Date().toISOString() });
-  res.json({ ok: true, id });
+  try {
+    const { name, email, password, role, avatar_color } = req.body;
+    if (!name||!email||!password||!role) return res.status(400).json({ error:'Missing fields' });
+    if (await queryOne('SELECT id FROM users WHERE LOWER(email)=LOWER($1)',[email])) return res.status(409).json({ error:'Email already in use' });
+    const id = uuid();
+    await query('INSERT INTO users (id,name,email,password,role,avatar_color) VALUES ($1,$2,$3,$4,$5,$6)', [id,name,email,await bcrypt.hash(password,10),role,avatar_color||'#D94F04']);
+    res.json({ ok:true, id });
+  } catch(e) { console.error(e); res.status(500).json({ error:'Server error' }); }
 });
 
 app.put('/api/users/:id', auth, async (req, res) => {
-  const isOwn = req.user.id === req.params.id;
-  const isAdmin = req.user.role === 'admin';
-  if (!isOwn && !isAdmin) return res.status(403).json({ error: 'Forbidden' });
-  const user = dbUsers.get(req.params.id);
-  if (!user) return res.status(404).json({ error: 'Not found' });
-  const { name, avatar_color, password, role } = req.body;
-  const updates = {
-    name: name || user.name,
-    avatar_color: avatar_color || user.avatar_color,
-    role: (isAdmin && role) ? role : user.role,
-    password: password ? await bcrypt.hash(password, 10) : user.password,
-  };
-  dbUsers.update(req.params.id, updates);
-  res.json({ ok: true });
+  try {
+    const isOwn = req.user.id===req.params.id, isAdmin = req.user.role==='admin';
+    if (!isOwn&&!isAdmin) return res.status(403).json({ error:'Forbidden' });
+    const user = await queryOne('SELECT * FROM users WHERE id=$1',[req.params.id]);
+    if (!user) return res.status(404).json({ error:'Not found' });
+    const { name, avatar_color, password, role } = req.body;
+    await query('UPDATE users SET name=$1,avatar_color=$2,role=$3,password=$4 WHERE id=$5',
+      [name||user.name, avatar_color||user.avatar_color, (isAdmin&&role)?role:user.role, password?await bcrypt.hash(password,10):user.password, req.params.id]);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error:'Server error' }); }
 });
 
-app.delete('/api/users/:id', auth, adminOnly, (req, res) => {
-  if (req.params.id === req.user.id) return res.status(400).json({ error: 'Cannot delete yourself' });
-  dbUsers.delete(req.params.id);
-  res.json({ ok: true });
+app.delete('/api/users/:id', auth, adminOnly, async (req, res) => {
+  try {
+    if (req.params.id===req.user.id) return res.status(400).json({ error:'Cannot delete yourself' });
+    await query('DELETE FROM users WHERE id=$1',[req.params.id]); res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error:'Server error' }); }
 });
 
-// ── Content item routes ───────────────────────────────────────────────────────
-app.get('/api/items', auth, (req, res) => {
-  let items = dbItems.all();
-  if (req.user.role === 'design') items = items.filter(i => i.design_assignee_id === req.user.id);
-  res.json(enrichItems(items));
+app.get('/api/items', auth, async (req, res) => {
+  try {
+    let sql = 'SELECT * FROM content_items WHERE 1=1', params = [];
+    if (req.user.role==='design') { sql+=' AND design_assignee_id=$1'; params.push(req.user.id); }
+    sql += ' ORDER BY created_at DESC';
+    const [items, users] = await Promise.all([query(sql,params), query('SELECT id,name,avatar_color,role FROM users')]);
+    res.json(enrichItems(items, users));
+  } catch(e) { console.error(e); res.status(500).json({ error:'Server error' }); }
 });
 
-app.post('/api/items', auth, (req, res) => {
-  if (!['admin','content'].includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
-  const { keywords, type, category, cluster, ams, content_status, content_writer_id,
-    content_delivery_date, seo_assigned_date, design_status, design_assignee_id,
-    design_assign_date, design_delivery_date, overall_status, approved,
-    live_url, new_content_link, notes, doc_link, images_needed, creative_drive } = req.body;
-  if (!keywords) return res.status(400).json({ error: 'keywords required' });
-  const id = uuid();
-  const item = {
-    id, keywords, type: type||'', category: category||'', cluster: cluster||'', ams: ams||'',
-    content_status: content_status||'Not Started', content_writer_id: content_writer_id||'',
-    content_delivery_date: content_delivery_date||'', seo_assigned_date: seo_assigned_date||'',
-    design_status: design_status||'Not Assigned', design_assignee_id: design_assignee_id||'',
-    design_assign_date: design_assign_date||'', design_delivery_date: design_delivery_date||'',
-    overall_status: overall_status||'In Progress', approved: approved||'',
-    live_url: live_url||'', new_content_link: new_content_link||'', notes: notes||'',
-    doc_link: doc_link||'', images_needed: images_needed||'', creative_drive: creative_drive||'',
-    created_by: req.user.id, created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-  };
-  dbItems.add(item);
-  dbLogs.add({ id: uuid(), item_id: id, user_id: req.user.id, user_name: req.user.name, action: 'created', details: `Created "${keywords}"`, created_at: new Date().toISOString() });
-  res.json(enrichItems([item])[0]);
+app.post('/api/items', auth, async (req, res) => {
+  try {
+    if (!['admin','content'].includes(req.user.role)) return res.status(403).json({ error:'Forbidden' });
+    const { keywords,type,category,cluster,ams,content_status,content_writer_id,content_delivery_date,seo_assigned_date,design_status,design_assignee_id,design_assign_date,design_delivery_date,overall_status,approved,live_url,new_content_link,notes,doc_link,images_needed,creative_drive } = req.body;
+    if (!keywords) return res.status(400).json({ error:'keywords required' });
+    const id = uuid();
+    await query(`INSERT INTO content_items (id,keywords,type,category,cluster,ams,content_status,content_writer_id,content_delivery_date,seo_assigned_date,design_status,design_assignee_id,design_assign_date,design_delivery_date,overall_status,approved,live_url,new_content_link,notes,doc_link,images_needed,creative_drive,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
+      [id,keywords,type||'',category||'',cluster||'',ams||'',content_status||'Not Started',content_writer_id||'',content_delivery_date||'',seo_assigned_date||'',design_status||'Not Assigned',design_assignee_id||'',design_assign_date||'',design_delivery_date||'',overall_status||'In Progress',approved||'',live_url||'',new_content_link||'',notes||'',doc_link||'',images_needed||'',creative_drive||'',req.user.id]);
+    await query('INSERT INTO activity_log (id,item_id,user_id,user_name,action,details) VALUES ($1,$2,$3,$4,$5,$6)',[uuid(),id,req.user.id,req.user.name,'created',`Created "${keywords}"`]);
+    const [item, users] = await Promise.all([queryOne('SELECT * FROM content_items WHERE id=$1',[id]), query('SELECT id,name,avatar_color,role FROM users')]);
+    res.json(enrichItems([item],users)[0]);
+  } catch(e) { console.error(e); res.status(500).json({ error:e.message }); }
 });
 
-app.put('/api/items/:id', auth, (req, res) => {
-  const item = dbItems.get(req.params.id);
-  if (!item) return res.status(404).json({ error: 'Not found' });
-  let updates = req.user.role === 'design'
-    ? { design_status: req.body.design_status, design_delivery_date: req.body.design_delivery_date, notes: req.body.notes, creative_drive: req.body.creative_drive }
-    : req.body;
-  if (req.user.role === 'design' && req.body.design_status === 'Design Done') updates.overall_status = 'Content Done';
-  // Remove undefined
-  Object.keys(updates).forEach(k => updates[k] === undefined && delete updates[k]);
-  dbItems.update(req.params.id, updates);
-  dbLogs.add({ id: uuid(), item_id: req.params.id, user_id: req.user.id, user_name: req.user.name, action: 'updated', details: JSON.stringify(updates), created_at: new Date().toISOString() });
-  res.json(enrichItems([dbItems.get(req.params.id)])[0]);
+app.put('/api/items/:id', auth, async (req, res) => {
+  try {
+    const item = await queryOne('SELECT * FROM content_items WHERE id=$1',[req.params.id]);
+    if (!item) return res.status(404).json({ error:'Not found' });
+    const allFields = ['keywords','type','category','cluster','ams','content_status','content_writer_id','content_delivery_date','seo_assigned_date','design_status','design_assignee_id','design_assign_date','design_delivery_date','overall_status','approved','live_url','new_content_link','notes','doc_link','images_needed','creative_drive'];
+    let fields = req.user.role==='design' ? ['design_status','design_delivery_date','notes','creative_drive'] : allFields;
+    if (req.user.role==='design' && req.body.design_status==='Design Done') { req.body.overall_status='Content Done'; fields=[...fields,'overall_status']; }
+    const sets=[], params=[];
+    let i=1;
+    fields.forEach(f => { if (req.body[f]!==undefined) { sets.push(`${f}=$${i++}`); params.push(req.body[f]); } });
+    if (!sets.length) return res.status(400).json({ error:'Nothing to update' });
+    sets.push('updated_at=NOW()'); params.push(req.params.id);
+    await query(`UPDATE content_items SET ${sets.join(',')} WHERE id=$${i}`, params);
+    await query('INSERT INTO activity_log (id,item_id,user_id,user_name,action,details) VALUES ($1,$2,$3,$4,$5,$6)',[uuid(),req.params.id,req.user.id,req.user.name,'updated',JSON.stringify(req.body)]);
+    const [updated, users] = await Promise.all([queryOne('SELECT * FROM content_items WHERE id=$1',[req.params.id]), query('SELECT id,name,avatar_color,role FROM users')]);
+    res.json(enrichItems([updated],users)[0]);
+  } catch(e) { console.error(e); res.status(500).json({ error:e.message }); }
 });
 
-app.delete('/api/items/:id', auth, adminOnly, (req, res) => {
-  dbItems.delete(req.params.id);
-  res.json({ ok: true });
+app.delete('/api/items/:id', auth, adminOnly, async (req, res) => {
+  try { await query('DELETE FROM content_items WHERE id=$1',[req.params.id]); res.json({ ok:true }); }
+  catch(e) { res.status(500).json({ error:'Server error' }); }
 });
 
-app.get('/api/items/:id/activity', auth, (req, res) => {
-  res.json(dbLogs.forItem(req.params.id));
+app.get('/api/items/:id/activity', auth, async (req, res) => {
+  try { res.json(await query('SELECT * FROM activity_log WHERE item_id=$1 ORDER BY created_at DESC LIMIT 10',[req.params.id])); }
+  catch(e) { res.status(500).json({ error:'Server error' }); }
 });
 
-app.get('/api/stats', auth, (req, res) => {
-  const items = dbItems.all();
-  const byType = {};
-  const byWriter = {};
-  items.forEach(i => {
-    if (i.type) byType[i.type] = (byType[i.type]||0) + 1;
-    if (i.content_writer_id) {
-      const w = dbUsers.get(i.content_writer_id);
-      if (w) byWriter[w.name] = (byWriter[w.name]||0) + 1;
-    }
-  });
-  res.json({
-    total:      items.length,
-    published:  items.filter(i => i.overall_status === 'Published').length,
-    designDone: items.filter(i => i.design_status === 'Design Done').length,
-    inProgress: items.filter(i => i.overall_status === 'In Progress').length,
-    byType:     Object.entries(byType).map(([type,count]) => ({type,count})).sort((a,b) => b.count-a.count),
-    byWriter:   Object.entries(byWriter).map(([name,count]) => ({name,count})).sort((a,b) => b.count-a.count).slice(0,8),
-  });
+app.get('/api/stats', auth, async (req, res) => {
+  try {
+    const [total,published,designDone,inProgress,byType,byWriter] = await Promise.all([
+      queryOne('SELECT COUNT(*) as n FROM content_items'),
+      queryOne("SELECT COUNT(*) as n FROM content_items WHERE overall_status='Published'"),
+      queryOne("SELECT COUNT(*) as n FROM content_items WHERE design_status='Design Done'"),
+      queryOne("SELECT COUNT(*) as n FROM content_items WHERE overall_status='In Progress'"),
+      query("SELECT type, COUNT(*) as count FROM content_items WHERE type!='' GROUP BY type ORDER BY count DESC"),
+      query("SELECT u.name, COUNT(*) as count FROM content_items ci JOIN users u ON ci.content_writer_id=u.id WHERE ci.content_writer_id!='' GROUP BY u.id,u.name ORDER BY count DESC LIMIT 8")
+    ]);
+    res.json({ total:parseInt(total?.n||0), published:parseInt(published?.n||0), designDone:parseInt(designDone?.n||0), inProgress:parseInt(inProgress?.n||0), byType, byWriter });
+  } catch(e) { res.status(500).json({ error:'Server error' }); }
 });
 
-app.get('/api/health', (req, res) => res.json({ ok: true, users: DB.users.length, items: DB.items.length }));
+app.get('/api/health', (req, res) => res.json({ ok:true }));
 
 app.use((req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error:'Not found' });
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
-seedAdmin().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Spyne Tracker on http://localhost:${PORT}`);
-    console.log(`📦 Data file: ${DATA_FILE}`);
-    console.log(`👥 Users: ${DB.users.length}, 📋 Items: ${DB.items.length}`);
-  });
-});
+initDB().then(async () => {
+  await seedAdmin();
+  app.listen(PORT, () => console.log(`Spyne Tracker running on port ${PORT}`));
+}).catch(err => { console.error('DB init failed:', err.message); process.exit(1); });
