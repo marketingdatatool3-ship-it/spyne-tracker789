@@ -1604,7 +1604,7 @@ function renderSEOTable() {
       <td>${typeChip(r.type)}</td>
       <td style="text-align:center">
         <span class="rank-pill ${getRankClass(crRank)}">${crRank||'—'}</span>
-        ${rankDiff!==null ? `<span style="font-size:10px;color:${rankDiff>0?'#4ADE80':rankDiff<0?'#F87171':'var(--tm)';margin-left:4px">${rankDiff>0?'↑'+rankDiff:rankDiff<0?'↓'+Math.abs(rankDiff):'='}</span>` : ''}
+          ${rankDiff!==null ? '<span style="font-size:10px;margin-left:4px;color:'+(rankDiff>0?'#4ADE80':rankDiff<0?'#F87171':'#888')+'">'+(rankDiff>0?'↑'+rankDiff:rankDiff<0?'↓'+Math.abs(rankDiff):'=')+'</span>' : ''}
       </td>
       <td style="text-align:center">
         <span class="rank-pill ${getRankClass(tgRank)}">${tgRank||'—'}</span>
