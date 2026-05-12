@@ -30,11 +30,15 @@ async function queryOne(sql, params = []) {
 
 async function initDB() {
   await query(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'content', avatar_color TEXT DEFAULT '#D94F04', created_at TIMESTAMPTZ DEFAULT NOW())`);
-  await query(`CREATE TABLE IF NOT EXISTS content_items (id TEXT PRIMARY KEY, keywords TEXT NOT NULL, type TEXT DEFAULT '', category TEXT DEFAULT '', cluster TEXT DEFAULT '', ams TEXT DEFAULT '', content_status TEXT DEFAULT 'Not Started', content_writer_id TEXT DEFAULT '', content_delivery_date TEXT DEFAULT '', seo_assigned_date TEXT DEFAULT '', design_status TEXT DEFAULT 'Not Assigned', design_assignee_id TEXT DEFAULT '', design_assign_date TEXT DEFAULT '', design_delivery_date TEXT DEFAULT '', overall_status TEXT DEFAULT 'In Progress', approved TEXT DEFAULT '', live_url TEXT DEFAULT '', new_content_link TEXT DEFAULT '', notes TEXT DEFAULT '', doc_link TEXT DEFAULT '', images_needed TEXT DEFAULT '', creative_drive TEXT DEFAULT '', created_by TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  await query(`CREATE TABLE IF NOT EXISTS content_items (id TEXT PRIMARY KEY, keywords TEXT NOT NULL, type TEXT DEFAULT '', category TEXT DEFAULT '', cluster TEXT DEFAULT '', ams TEXT DEFAULT '', content_status TEXT DEFAULT 'Not Started', content_writer_id TEXT DEFAULT '', content_delivery_date TEXT DEFAULT '', seo_assigned_date TEXT DEFAULT '', design_status TEXT DEFAULT 'Not Assigned', design_assignee_id TEXT DEFAULT '', design_assign_date TEXT DEFAULT '', design_delivery_date TEXT DEFAULT '', overall_status TEXT DEFAULT 'In Progress', approved TEXT DEFAULT '', live_url TEXT DEFAULT '', new_content_link TEXT DEFAULT '', notes TEXT DEFAULT '', doc_link TEXT DEFAULT '', images_needed TEXT DEFAULT '', creative_drive TEXT DEFAULT '', current_ranking TEXT DEFAULT '', target_ranking TEXT DEFAULT '', current_traffic TEXT DEFAULT '', target_traffic TEXT DEFAULT '', created_by TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
   await query(`CREATE TABLE IF NOT EXISTS activity_log (id TEXT PRIMARY KEY, item_id TEXT, user_id TEXT, user_name TEXT, action TEXT, details TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS doc_link TEXT DEFAULT ''"); } catch(e) {}
   try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS images_needed TEXT DEFAULT ''"); } catch(e) {}
   try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS creative_drive TEXT DEFAULT ''"); } catch(e) {}
+  try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS current_ranking TEXT DEFAULT ''"); } catch(e) {}
+  try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS target_ranking TEXT DEFAULT ''"); } catch(e) {}
+  try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS current_traffic TEXT DEFAULT ''"); } catch(e) {}
+  try { await query("ALTER TABLE content_items ADD COLUMN IF NOT EXISTS target_traffic TEXT DEFAULT ''"); } catch(e) {}
   console.log('Database ready');
 }
 
@@ -149,7 +153,7 @@ app.put('/api/items/:id', auth, async (req, res) => {
   try {
     const item = await queryOne('SELECT * FROM content_items WHERE id=$1',[req.params.id]);
     if (!item) return res.status(404).json({ error:'Not found' });
-    const allFields = ['keywords','type','category','cluster','ams','content_status','content_writer_id','content_delivery_date','seo_assigned_date','design_status','design_assignee_id','design_assign_date','design_delivery_date','overall_status','approved','live_url','new_content_link','notes','doc_link','images_needed','creative_drive'];
+    const allFields = ['keywords','type','category','cluster','ams','content_status','content_writer_id','content_delivery_date','seo_assigned_date','design_status','design_assignee_id','design_assign_date','design_delivery_date','overall_status','approved','live_url','new_content_link','notes','doc_link','images_needed','creative_drive','current_ranking','target_ranking','current_traffic','target_traffic'];
     let fields = req.user.role==='design' ? ['design_status','design_delivery_date','notes','creative_drive'] : allFields;
     if (req.user.role==='design' && req.body.design_status==='Design Done') { req.body.overall_status='Content Done'; fields=[...fields,'overall_status']; }
     const sets=[], params=[];
@@ -189,6 +193,36 @@ app.get('/api/stats', auth, async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok:true }));
+
+// Emergency password reset - only works with reset token
+app.post('/api/reset-admin', async (req, res) => {
+  try {
+    const { reset_token, new_password } = req.body;
+    // Token must match env var or hardcoded fallback
+    const validToken = process.env.RESET_TOKEN || 'spyne-reset-2024';
+    if (reset_token !== validToken) return res.status(403).json({ error: 'Invalid reset token' });
+    if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'Password too short' });
+    const hash = await bcrypt.hash(new_password, 10);
+    // Reset admin password
+    const result = await query(
+      "UPDATE users SET password=$1 WHERE LOWER(email)=LOWER($2) RETURNING id,name,email,role",
+      [hash, 'admin@spyne.ai']
+    );
+    if (!result.length) return res.status(404).json({ error: 'Admin user not found' });
+    res.json({ ok: true, message: 'Admin password reset successfully', user: result[0] });
+  } catch(e) { console.error(e); res.status(500).json({ error: e.message }); }
+});
+
+// List all users (with reset token auth)
+app.post('/api/list-users', async (req, res) => {
+  try {
+    const { reset_token } = req.body;
+    const validToken = process.env.RESET_TOKEN || 'spyne-reset-2024';
+    if (reset_token !== validToken) return res.status(403).json({ error: 'Invalid reset token' });
+    const users = await query('SELECT id, name, email, role, created_at FROM users ORDER BY created_at');
+    res.json({ users, count: users.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error:'Not found' });
