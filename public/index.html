@@ -12,28 +12,28 @@
 :root {
   --or:  #D94F04;
   --orl: #FF6B35;
-  --orp: rgba(217,79,4,.12);
-  --bg:  #0A0A0B;
-  --s1:  #111114;
-  --s2:  #18181C;
-  --s3:  #222227;
-  --b1:  #2A2A30;
-  --b2:  #38383F;
-  --tx:  #F0F0F2;
-  --tm:  #8A8A95;
-  --td:  #4A4A55;
-  --gr:  #22C55E;
-  --bl:  #3B82F6;
-  --yw:  #F59E0B;
-  --rd:  #EF4444;
-  --pu:  #A855F7;
-  --cy:  #06B6D4;
+  --orp: rgba(217,79,4,.10);
+  --bg:  #F5F5F7;
+  --s1:  #FFFFFF;
+  --s2:  #F8F8FA;
+  --s3:  #F0F0F3;
+  --b1:  #E2E2E8;
+  --b2:  #D0D0D8;
+  --tx:  #111116;
+  --tm:  #6B6B78;
+  --td:  #A0A0AC;
+  --gr:  #16A34A;
+  --bl:  #2563EB;
+  --yw:  #D97706;
+  --rd:  #DC2626;
+  --pu:  #9333EA;
+  --cy:  #0891B2;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.5}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--b1);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 
 /* ── Utilities ────────────────────────────────────────────────────────── */
 .hidden{display:none!important}
@@ -45,12 +45,12 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-seri
 #login-screen{
   display:flex;align-items:center;justify-content:center;
   min-height:100vh;
-  background:var(--bg);
+  background:linear-gradient(135deg,#FFF5F2 0%,#F5F5F7 50%,#F0F4FF 100%);
   position:relative;overflow:hidden;
 }
 .login-bg{
   position:absolute;inset:0;
-  background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(217,79,4,.18) 0%, transparent 70%);
+  background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(217,79,4,.08) 0%, transparent 70%);
   pointer-events:none;
 }
 .login-card{
@@ -60,7 +60,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-seri
   padding:40px 40px 36px;
   width:380px;
   position:relative;z-index:1;
-  box-shadow:0 40px 80px rgba(0,0,0,.5);
+  box-shadow:0 8px 40px rgba(0,0,0,.10);
 }
 .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
 .lmark{
@@ -135,8 +135,8 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-seri
 }
 .nav-item:hover{background:var(--s2);color:var(--tx)}
 .nav-item.active{
-  background:var(--orp);color:var(--orl);
-  border-left-color:var(--or);font-weight:500;
+  background:var(--orp);color:var(--or);
+  border-left-color:var(--or);font-weight:600;
 }
 .nav-icon{font-size:15px;width:18px;text-align:center}
 .nav-badge{
@@ -144,7 +144,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-seri
   background:var(--s3);color:var(--tm);
   border-radius:10px;padding:1px 7px;
 }
-.nav-item.active .nav-badge{background:var(--orp);color:var(--orl)}
+.nav-item.active .nav-badge{background:var(--orp);color:var(--or)}
 .sidebar-bottom{
   padding:12px 14px;border-top:1px solid var(--b1);
 }
@@ -193,8 +193,9 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-seri
 }
 .stat-pill{
   display:flex;align-items:center;gap:8px;
-  background:var(--s2);border:1px solid var(--b1);
+  background:var(--s1);border:1px solid var(--b1);
   border-radius:8px;padding:8px 14px;flex:1;min-width:100px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
 }
 .stat-ic{
   width:30px;height:30px;border-radius:6px;
@@ -239,7 +240,7 @@ select.filter option{background:var(--s2)}
 
 /* ── Table ───────────────────────────────────────────────────────────── */
 table{width:100%;border-collapse:collapse;font-size:13px}
-thead{position:sticky;top:0;z-index:5;background:var(--s2)}
+thead{position:sticky;top:0;z-index:5;background:var(--s2);box-shadow:0 1px 0 var(--b1)}
 th{
   text-align:left;padding:10px 14px;
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
@@ -267,7 +268,7 @@ td.kw{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   border-radius:8px;padding:12px;cursor:pointer;
   transition:border-color .12s,transform .1s;
 }
-.k-card:hover{border-color:var(--or);transform:translateY(-1px)}
+.k-card:hover{border-color:var(--or);transform:translateY(-1px);box-shadow:0 4px 12px rgba(217,79,4,.1)}
 .k-card-title{
   font-size:12px;font-weight:500;color:var(--tx);margin-bottom:8px;line-height:1.4;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -279,24 +280,24 @@ td.kw{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   display:inline-flex;align-items:center;gap:4px;
   font-size:11px;font-weight:500;border-radius:5px;padding:2px 8px;white-space:nowrap;
 }
-.bg{background:rgba(34,197,94,.12);color:#4ADE80}
-.bb{background:rgba(59,130,246,.12);color:#60A5FA}
-.by{background:rgba(245,158,11,.12);color:#FCD34D}
-.br{background:rgba(239,68,68,.12);color:#F87171}
-.bk{background:rgba(255,255,255,.06);color:var(--tm)}
-.bo{background:rgba(217,79,4,.15);color:var(--orl)}
-.bp{background:rgba(168,85,247,.12);color:#C084FC}
-.bc{background:rgba(6,182,212,.12);color:#22D3EE}
+.bg{background:rgba(22,163,74,.12);color:#15803D}
+.bb{background:rgba(37,99,235,.12);color:#1D4ED8}
+.by{background:rgba(217,119,6,.12);color:#B45309}
+.br{background:rgba(220,38,38,.12);color:#B91C1C}
+.bk{background:rgba(0,0,0,.06);color:var(--tm)}
+.bo{background:rgba(217,79,4,.12);color:#B45309}
+.bp{background:rgba(147,51,234,.12);color:#7E22CE}
+.bc{background:rgba(8,145,178,.12);color:#0E7490}
 
 .chip{
   display:inline-block;font-size:10px;font-weight:700;
   border-radius:4px;padding:2px 7px;text-transform:uppercase;letter-spacing:.04em;
 }
-.ch-blog{background:rgba(59,130,246,.12);color:#93C5FD}
-.ch-lp{background:rgba(168,85,247,.12);color:#C084FC}
-.ch-case{background:rgba(245,158,11,.12);color:#FCD34D}
-.ch-book{background:rgba(6,182,212,.12);color:#5EEAD4}
-.ch-oth{background:rgba(255,255,255,.06);color:#9CA3AF}
+.ch-blog{background:rgba(37,99,235,.1);color:#1D4ED8}
+.ch-lp{background:rgba(147,51,234,.1);color:#7E22CE}
+.ch-case{background:rgba(217,119,6,.1);color:#B45309}
+.ch-book{background:rgba(8,145,178,.1);color:#0E7490}
+.ch-oth{background:rgba(0,0,0,.06);color:#6B7280}
 
 /* ── Modal / Drawer ──────────────────────────────────────────────────── */
 .overlay{
@@ -407,8 +408,36 @@ td.kw{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   position:fixed;bottom:24px;right:24px;z-index:9999;
   background:var(--s2);border:1px solid var(--b1);border-radius:8px;
   padding:12px 18px;font-size:13px;display:flex;align-items:center;gap:10px;
-  animation:su .18s ease;box-shadow:0 8px 24px rgba(0,0,0,.4);
+  animation:su .18s ease;box-shadow:0 4px 16px rgba(0,0,0,.10);
 }
+
+/* Reddit and Quora */
+.reddit-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.reddit-topbar{padding:12px 24px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;background:var(--s1);flex-shrink:0}
+.reddit-topbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rbadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:6px}
+.reddit-frame{flex:1;border:none;width:100%;min-height:calc(100vh - 160px)}
+.reddit-open-btn{padding:8px 16px;background:var(--or);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.reddit-open-btn:hover{background:var(--orl)}
+.reddit-loading{position:absolute;inset:56px 0 0 0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:5;flex-direction:column;gap:12px}
+
+/* SEO Performance */
+.seo-table-wrap{padding:24px;overflow:auto;flex:1}
+.seo-table{width:100%;border-collapse:collapse;font-size:13px}
+.seo-table th{text-align:left;padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tm);border-bottom:1px solid var(--b1);background:var(--s2);white-space:nowrap;cursor:pointer}
+.seo-table td{padding:10px 14px;border-bottom:1px solid var(--b1);vertical-align:middle}
+.seo-table tr:hover td{background:rgba(255,255,255,.025)}
+.rank-pill{display:inline-flex;align-items:center;justify-content:center;width:36px;height:24px;border-radius:5px;font-size:12px;font-weight:700}
+.rank-good{background:rgba(22,163,74,.12);color:#15803D}
+.rank-mid{background:rgba(217,119,6,.12);color:#B45309}
+.rank-bad{background:rgba(220,38,38,.12);color:#B91C1C}
+.rank-none{background:rgba(0,0,0,.06);color:var(--tm)}
+.traffic-bar-wrap{display:flex;align-items:center;gap:8px}
+.traffic-bar{height:6px;border-radius:3px;background:var(--s3);flex:1;overflow:hidden}
+.traffic-bar-fill{height:100%;border-radius:3px;background:var(--or)}
+.seo-edit-btn{background:var(--s3);border:1px solid var(--b1);border-radius:5px;padding:3px 8px;font-size:11px;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif}
+.seo-edit-btn:hover{color:var(--tx);border-color:var(--or)}
+.seo-filters{padding:10px 24px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--b1);flex-wrap:wrap}
 
 /* Responsive */
 @media(max-width:700px){
@@ -609,6 +638,8 @@ function buildSidebar() {
     { page:'kanban', icon:'🗂️', label:'Board View',    role:['admin','content','design'] },
     { page:'design', icon:'🎨', label:'Design Queue',  role:['admin','design'] },
     { page:'stats',  icon:'📊', label:'Stats',         role:['admin','content'] },
+    { page:'seo',    icon:'📈', label:'SEO Performance', role:['admin','content'] },
+    { page:'reddit',  icon:'🤖', label:'Reddit & Quora',   role:['admin','content'] },
     { page:'users',  icon:'👥', label:'Team Members',  role:['admin'] },
   ];
   nav.innerHTML = items
@@ -648,7 +679,7 @@ function writerUsers()   { return USERS.filter(u => ['content','admin'].includes
 function goPage(page) {
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page === page));
-  const titles = { items:'All Content', kanban:'Board View', design:'Design Queue', stats:'Stats', users:'Team Members', profile:'My Profile' };
+  const titles = { items:'All Content', kanban:'Board View', design:'Design Queue', stats:'Stats', seo:'SEO Performance', reddit:'Reddit & Quora', users:'Team Members', profile:'My Profile' };
   document.getElementById('page-title').textContent = titles[page] || page;
   const actions = document.getElementById('topbar-actions');
   actions.innerHTML = '';
@@ -660,6 +691,10 @@ function goPage(page) {
     renderItemsPage(page);
   } else if (page === 'stats') {
     renderStats();
+  } else if (page === 'seo') {
+    renderSEO();
+  } else if (page === 'reddit') {
+    renderReddit();
   } else if (page === 'users') {
     if (ME.role === 'admin') {
       actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openUserDrawer()">+ Add User</button>`;
@@ -1403,6 +1438,264 @@ function showToast(msg, err=false) {
   t.style.borderColor=err?'rgba(239,68,68,.4)':'rgba(34,197,94,.4)';
   t.textContent=msg; document.body.appendChild(t);
   setTimeout(()=>t.remove(),3200);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Reddit & Quora Page
+// ══════════════════════════════════════════════════════════════════════════════
+function renderReddit() {
+  const pc = document.getElementById('page-content');
+  const URL = 'https://reddit-and-quora-tracker.onrender.com/';
+  pc.innerHTML = `
+    <div class="reddit-wrap">
+      <div class="reddit-topbar">
+        <div class="reddit-topbar-left">
+          <span class="rbadge" style="background:rgba(255,69,0,.12);color:#FF6314">🤖 Reddit Automation</span>
+          <span class="rbadge" style="background:rgba(167,29,49,.12);color:#E8374F">💬 Quora Tracker</span>
+          <span style="font-size:12px;color:var(--tm)">Live from automation</span>
+        </div>
+        <a href="${URL}" target="_blank" class="reddit-open-btn">↗ Open in new tab</a>
+      </div>
+      <div class="reddit-loading" id="reddit-loading">
+        <div class="spinner"></div>
+        <p style="color:var(--tm);font-size:13px">Loading Reddit & Quora tracker…</p>
+        <p style="color:var(--td);font-size:11px">This may take ~30 seconds on free tier</p>
+      </div>
+      <iframe
+        id="reddit-frame"
+        class="reddit-frame"
+        src="${URL}"
+        onload="document.getElementById('reddit-loading').style.display='none'"
+      ></iframe>
+    </div>
+  `;
+  setTimeout(() => {
+    const el = document.getElementById('reddit-loading');
+    if (el) el.style.display = 'none';
+  }, 35000);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SEO Performance Page
+// ══════════════════════════════════════════════════════════════════════════════
+let seoSortCol = 'keywords', seoSortDir = 1, seoSearch = '';
+
+function renderSEO() {
+  const pc = document.getElementById('page-content');
+  const canEdit = ['admin','content'].includes(ME.role);
+
+  pc.innerHTML = `
+    <div class="seo-filters">
+      <div class="search-wrap" style="max-width:340px">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="search-input" id="seo-srch" placeholder="Search blogs, landing pages…" oninput="renderSEOTable()">
+      </div>
+      <select class="filter" id="seo-type" onchange="renderSEOTable()">
+        <option value="">All Types</option>
+        <option>Blog</option><option>Landing Page</option>
+      </select>
+      <select class="filter" id="seo-rank-filter" onchange="renderSEOTable()">
+        <option value="">All Rankings</option>
+        <option value="top3">Top 3</option>
+        <option value="top10">Top 10</option>
+        <option value="top20">Top 20</option>
+        <option value="unranked">Not Ranked</option>
+      </select>
+      <span class="res-count" id="seo-count"></span>
+    </div>
+    <div class="seo-table-wrap">
+      <table class="seo-table">
+        <thead>
+          <tr>
+            <th onclick="seoSort('keywords')" style="min-width:240px">Keyword / Title</th>
+            <th onclick="seoSort('type')">Type</th>
+            <th onclick="seoSort('current_ranking')" style="text-align:center">Current Rank</th>
+            <th onclick="seoSort('target_ranking')" style="text-align:center">Target Rank</th>
+            <th onclick="seoSort('current_traffic')" style="min-width:140px">Current Traffic</th>
+            <th onclick="seoSort('target_traffic')" style="min-width:140px">Target Traffic</th>
+            <th onclick="seoSort('overall_status')">Status</th>
+            ${canEdit ? '<th style="width:60px">Edit</th>' : ''}
+          </tr>
+        </thead>
+        <tbody id="seo-tbody"></tbody>
+      </table>
+    </div>
+  `;
+  renderSEOTable();
+}
+
+function seoSort(col) {
+  if (seoSortCol === col) seoSortDir *= -1; else { seoSortCol = col; seoSortDir = 1; }
+  renderSEOTable();
+}
+
+function getRankClass(r) {
+  if (!r || r === '' || r === '0') return 'rank-none';
+  const n = parseInt(r);
+  if (isNaN(n)) return 'rank-none';
+  if (n <= 3) return 'rank-good';
+  if (n <= 10) return 'rank-mid';
+  return 'rank-bad';
+}
+
+function maxTraffic(items) {
+  return Math.max(...items.map(i => parseInt(i.target_traffic)||parseInt(i.current_traffic)||0), 1);
+}
+
+function renderSEOTable() {
+  const q       = (document.getElementById('seo-srch')?.value||'').toLowerCase();
+  const ftype   = document.getElementById('seo-type')?.value||'';
+  const frankf  = document.getElementById('seo-rank-filter')?.value||'';
+  const canEdit = ['admin','content'].includes(ME.role);
+
+  // Only show published/content done items
+  let data = ITEMS.filter(r => {
+    if (!['Blog','Landing Page'].includes(r.type) && ftype === '') {
+      // show all types if no filter
+    }
+    if (ftype && r.type !== ftype) return false;
+    if (q) {
+      const hay = [r.keywords, r.type, r.cluster].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (frankf) {
+      const rank = parseInt(r.current_ranking)||0;
+      if (frankf==='top3'   && !(rank>0&&rank<=3))  return false;
+      if (frankf==='top10'  && !(rank>0&&rank<=10)) return false;
+      if (frankf==='top20'  && !(rank>0&&rank<=20)) return false;
+      if (frankf==='unranked' && rank>0) return false;
+    }
+    return true;
+  });
+
+  data.sort((a,b) => {
+    const av = (a[seoSortCol]||'').toString().toLowerCase();
+    const bv = (b[seoSortCol]||'').toString().toLowerCase();
+    // Numeric sort for ranking/traffic fields
+    if (['current_ranking','target_ranking','current_traffic','target_traffic'].includes(seoSortCol)) {
+      return (parseInt(av)||0) < (parseInt(bv)||0) ? -seoSortDir : (parseInt(av)||0) > (parseInt(bv)||0) ? seoSortDir : 0;
+    }
+    return av < bv ? -seoSortDir : av > bv ? seoSortDir : 0;
+  });
+
+  document.getElementById('seo-count').textContent = data.length + ' items';
+  const max = maxTraffic(data);
+
+  const tbody = document.getElementById('seo-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--tm)">No items found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(r => {
+    const crRank  = r.current_ranking||'';
+    const tgRank  = r.target_ranking||'';
+    const crTraff = parseInt(r.current_traffic)||0;
+    const tgTraff = parseInt(r.target_traffic)||0;
+    const maxVal  = Math.max(tgTraff, crTraff, max);
+    const crPct   = maxVal ? Math.round(crTraff/maxVal*100) : 0;
+    const tgPct   = maxVal ? Math.round(tgTraff/maxVal*100) : 0;
+    const rankDiff = crRank&&tgRank ? parseInt(crRank)-parseInt(tgRank) : null;
+
+    return `<tr>
+      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">
+        ${r.live_url ? `<a href="${r.live_url}" target="_blank" style="color:var(--tx);text-decoration:none" title="${r.keywords}">${r.keywords}</a>` : r.keywords}
+      </td>
+      <td>${typeChip(r.type)}</td>
+      <td style="text-align:center">
+        <span class="rank-pill ${getRankClass(crRank)}">${crRank||'—'}</span>
+        ${rankDiff!==null ? `<span style="font-size:10px;color:${rankDiff>0?'#4ADE80':rankDiff<0?'#F87171':'var(--tm)';margin-left:4px">${rankDiff>0?'↑'+rankDiff:rankDiff<0?'↓'+Math.abs(rankDiff):'='}</span>` : ''}
+      </td>
+      <td style="text-align:center">
+        <span class="rank-pill ${getRankClass(tgRank)}">${tgRank||'—'}</span>
+      </td>
+      <td>
+        <div class="traffic-bar-wrap">
+          <div class="traffic-bar"><div class="traffic-bar-fill" style="width:${crPct}%;background:var(--bl)"></div></div>
+          <span style="font-size:12px;color:var(--tm);width:50px;text-align:right">${crTraff?crTraff.toLocaleString():'—'}</span>
+        </div>
+      </td>
+      <td>
+        <div class="traffic-bar-wrap">
+          <div class="traffic-bar"><div class="traffic-bar-fill" style="width:${tgPct}%"></div></div>
+          <span style="font-size:12px;color:var(--tm);width:50px;text-align:right">${tgTraff?tgTraff.toLocaleString():'—'}</span>
+        </div>
+      </td>
+      <td>${statusBadge(r.overall_status)}</td>
+      ${canEdit ? `<td><button class="seo-edit-btn" onclick="openSEOEdit('${r.id}')">Edit</button></td>` : ''}
+    </tr>`;
+  }).join('');
+}
+
+function openSEOEdit(id) {
+  const r = ITEMS.find(x=>x.id===id); if (!r) return;
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="drawer-hd">
+      <div class="drawer-title">SEO Data — ${r.keywords.slice(0,40)}${r.keywords.length>40?'…':''}</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeDrawer()">✕</button>
+    </div>
+    <form id="seo-form" onsubmit="submitSEO(event,'${id}')">
+      <div class="form-row2">
+        <div class="form-group">
+          <label class="form-label">Current Ranking</label>
+          <input class="form-input" name="current_ranking" type="number" min="1" placeholder="e.g. 14" value="${r.current_ranking||''}">
+          <div style="font-size:11px;color:var(--td);margin-top:4px">Position on Google today</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Ranking</label>
+          <input class="form-input" name="target_ranking" type="number" min="1" placeholder="e.g. 3" value="${r.target_ranking||''}">
+          <div style="font-size:11px;color:var(--td);margin-top:4px">Goal position to reach</div>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label class="form-label">Current Traffic</label>
+          <input class="form-input" name="current_traffic" type="number" min="0" placeholder="e.g. 520" value="${r.current_traffic||''}">
+          <div style="font-size:11px;color:var(--td);margin-top:4px">Monthly organic visits now</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Traffic</label>
+          <input class="form-input" name="target_traffic" type="number" min="0" placeholder="e.g. 2000" value="${r.target_traffic||''}">
+          <div style="font-size:11px;color:var(--td);margin-top:4px">Monthly visits goal</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Live URL</label>
+        <input class="form-input" name="live_url" type="url" placeholder="https://spyne.ai/blogs/…" value="${r.live_url||''}">
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">Current snapshot</div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap">
+          <div><div style="font-size:10px;color:var(--tm)">Rank</div><div style="font-size:18px;font-weight:700;color:${r.current_ranking?'#4ADE80':'var(--td)'}">${r.current_ranking||'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--tm)">Traffic</div><div style="font-size:18px;font-weight:700;color:var(--orl)">${r.current_traffic?parseInt(r.current_traffic).toLocaleString():'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--tm)">Target Rank</div><div style="font-size:18px;font-weight:700;color:var(--bl)">${r.target_ranking||'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--tm)">Target Traffic</div><div style="font-size:18px;font-weight:700;color:var(--yw)">${r.target_traffic?parseInt(r.target_traffic).toLocaleString():'—'}</div></div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeDrawer()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="seo-submit">Save SEO Data</button>
+      </div>
+    </form>
+  `;
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+
+async function submitSEO(e, id) {
+  e.preventDefault();
+  const btn = document.getElementById('seo-submit');
+  btn.disabled=true; btn.textContent='Saving…';
+  const fd=new FormData(e.target); const body={};
+  fd.forEach((v,k)=>{ body[k]=v||null; });
+  try {
+    const updated = await PUT('/api/items/'+id, body);
+    const idx = ITEMS.findIndex(x=>x.id===id);
+    if (idx>=0) ITEMS[idx] = updated;
+    closeDrawer();
+    showToast('✅ SEO data saved!');
+    renderSEO();
+  } catch(err) { showToast('⚠ '+err.message, true); }
+  finally { btn.disabled=false; btn.textContent='Save SEO Data'; }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
